@@ -406,7 +406,9 @@ else:
     max_affordable_price = home_price
     loan_amount = home_price - down_payment_amount
     
-    # Recalculate final values
+    # Recalculate final values with fresh variables
+    monthly_rate = interest_rate / 100 / 12
+    total_months = loan_term * 12
     monthly_pi = pmt(monthly_rate, total_months, loan_amount)
     monthly_tax = home_price * property_tax_rate / 100 / 12
     monthly_insurance = home_insurance / 12
