@@ -351,6 +351,10 @@ else:
     max_payment_back = monthly_income * max_back_dti - existing_debt
     max_payment_constraint = min(max_payment_front, max_payment_back)
     
+    # Ensure positive payment constraint
+    if max_payment_constraint <= 0:
+        max_payment_constraint = 1000  # Minimum payment to prevent errors
+    
     # Estimate other costs as percentage of price to solve iteratively
     # Assume price P, then other costs are functions of P
     # Total payment = PI + Tax + Insurance + HOA + PMI
@@ -377,6 +381,10 @@ else:
             monthly_pmi = estimated_loan * pmi_rate / 100 / 12
         
         estimated_total = monthly_pi + monthly_tax + monthly_insurance + monthly_hoa + monthly_pmi
+        
+        # Prevent infinite loop or invalid calculations
+        if estimated_total <= 0:
+            estimated_total = max_payment_constraint
         
         if abs(estimated_total - max_payment_constraint) < 10:
             break
