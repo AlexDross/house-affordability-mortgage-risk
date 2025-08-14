@@ -360,38 +360,46 @@ else:
     # Total payment = PI + Tax + Insurance + HOA + PMI
     # PI comes from loan amount = P - down_payment
     
-    # Iterative solution for maximum price
-    estimated_price = 400000  # Starting guess
-    for _ in range(10):  # Iterate to converge
-        estimated_loan = estimated_price - down_payment_amount
-        monthly_rate = interest_rate / 100 / 12
-        total_months = loan_term * 12
+    # Simple affordability calculation - estimate max loan from max payment
+    # Estimate non-P&I costs as percentage of payment for initial guess
+    estimated_other_costs = home_insurance / 12 + hoa_fees  # Fixed costs
+    available_for_pi_and_tax = max_payment_constraint - estimated_other_costs
+    
+    # Estimate price iteratively
+    monthly_rate = interest_rate / 100 / 12
+    total_months = loan_term * 12
+    
+    # Start with a reasonable guess
+    estimated_price = max(down_payment_amount * 4, 200000)
+    
+    for _ in range(15):  # More iterations for stability
+        estimated_loan = max(estimated_price - down_payment_amount, 1000)
         
-        if estimated_loan <= 0:
-            estimated_price = down_payment_amount * 2
-            continue
-            
+        # Calculate all components
         monthly_pi = pmt(monthly_rate, total_months, estimated_loan)
         monthly_tax = estimated_price * property_tax_rate / 100 / 12
         monthly_insurance = home_insurance / 12
         monthly_hoa = hoa_fees
         
+        # PMI calculation
         monthly_pmi = 0
-        if down_payment_amount / estimated_price < 0.20:
+        if estimated_price > 0 and down_payment_amount / estimated_price < 0.20:
             monthly_pmi = estimated_loan * pmi_rate / 100 / 12
         
         estimated_total = monthly_pi + monthly_tax + monthly_insurance + monthly_hoa + monthly_pmi
         
-        # Prevent infinite loop or invalid calculations
-        if estimated_total <= 0:
-            estimated_total = max_payment_constraint
-        
-        if abs(estimated_total - max_payment_constraint) < 10:
+        # Check convergence
+        if abs(estimated_total - max_payment_constraint) < 5:
             break
+            
+        # Adjust estimate - be more conservative with adjustments
+        if estimated_total > max_payment_constraint:
+            estimated_price *= 0.95  # Reduce price
+        else:
+            estimated_price *= 1.02  # Increase price slightly
         
-        # Adjust price based on payment difference
-        ratio = max_payment_constraint / estimated_total
-        estimated_price *= ratio
+        # Ensure price stays reasonable
+        estimated_price = max(estimated_price, down_payment_amount + 10000)
     
     # Set calculated values
     home_price = max(estimated_price, down_payment_amount + 1000)
